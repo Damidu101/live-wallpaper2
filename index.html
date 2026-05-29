@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Live Wallpapers</title>
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      background: #050816;
+      overflow-x: hidden;
+      color: white;
+      scroll-behavior: smooth;
+    }
+
+    canvas {
+      position: fixed;
+      inset: 0;
+      z-index: -2;
+    }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle at top, rgba(111,0,255,0.25), transparent 60%);
+      z-index: -1;
+    }
+
+    .loader {
+      position: fixed;
+      inset: 0;
+      background: #050816;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      transition: opacity 1s ease;
+    }
+
+    .loader h1 {
+      color: #8f5cff;
+      font-size: 3rem;
+      text-shadow: 0 0 20px #8f5cff;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0%,100% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+    }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(10px);
+      background: rgba(0,0,0,0.3);
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
+    nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 50px;
+    }
+
+    .logo {
+      font-size: 1.8rem;
+      font-weight: bold;
+      color: #9b7bff;
+      text-shadow: 0 0 10px #8f5cff;
+    }
+
+    nav ul {
+      display: flex;
+      gap: 20px;
+      list-style: none;
+    }
+
+    nav ul li {
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    nav ul li:hover {
+      color: #9b7bff;
+      text-shadow: 0 0 10px #9b7bff;
+    }
+
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      text-align: center;
+      padding: 20px;
+    }
+
+    .hero h1 {
+      font-size: 5rem;
+      background: linear-gradient(90deg,#8f5cff,#00e0ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 0 30px rgba(143,92,255,0.5);
+    }
+
+    .hero p {
+      margin-top: 15px;
+      color: #ccc;
+      max-width: 700px;
+      line-height: 1.6;
+    }
+
+    .search-box {
+      margin-top: 30px;
+      width: 100%;
+      max-width: 600px;
+      display: flex;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 15px;
+      overflow: hidden;
+      backdrop-filter: blur(15px);
+    }
+
+    .search-box input {
+      flex: 1;
+      padding: 15px;
+      border: none;
+      background: transparent;
+      color: white;
+      outline: none;
+      font-size: 1rem;
+    }
+
+    .search-box button {
+      padding: 15px 25px;
+      border: none;
+      background: #8f5cff;
+      color: white;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    .search-box button:hover {
+      background: #6f38ff;
+    }
+
+    .clock {
+      margin-top: 20px;
+      font-size: 1.1rem;
+      color: #bbb;
+    }
+
+    section {
+      padding: 80px 40px;
+    }
+
+    .section-title {
+      font-size: 2.5rem;
+      margin-bottom: 40px;
+      text-align: center;
+      color: #9b7bff;
+    }
+
+    .categories {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 15px;
+      margin-bottom: 50px;
+    }
+
+    .category {
+      padding: 12px 25px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.1);
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    .category:hover {
+      background: #8f5cff;
+      transform: translateY(-3px);
+      box-shadow: 0 0 20px rgba(143,92,255,0.7);
+    }
+
+    .wallpapers {
+      display: grid;
+      grid-template-columns: repeat(auto-fit,minmax(280px,1fr));
+      gap: 30px;
+    }
+
+    .card {
+      position: relative;
+      overflow: hidden;
+      border-radius: 20px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.1);
+      backdrop-filter: blur(12px);
+      transition: 0.4s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-10px) scale(1.02);
+      box-shadow: 0 0 30px rgba(143,92,255,0.5);
+    }
+
+    .card img {
+      width: 100%;
+      height: 220px;
+      object-fit: cover;
+    }
+
+    .card-content {
+      padding: 20px;
+    }
+
+    .card-content h3 {
+      margin-bottom: 10px;
+    }
+
+    .buttons {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    .buttons button {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: 0.3s;
+      color: white;
+    }
+
+    .preview {
+      background: #00b4ff;
+    }
+
+    .download {
+      background: #8f5cff;
+    }
+
+    .buttons button:hover {
+      opacity: 0.8;
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.8);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    .modal img {
+      width: 80%;
+      max-width: 900px;
+      border-radius: 20px;
+      box-shadow: 0 0 30px #8f5cff;
+    }
+
+    .music-btn,
+    .theme-btn {
+      position: fixed;
+      bottom: 20px;
+      width: 55px;
+      height: 55px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(255,255,255,0.1);
+      backdrop-filter: blur(10px);
+      color: white;
+      cursor: pointer;
+      z-index: 999;
+      font-size: 1.2rem;
+      transition: 0.3s;
+    }
+
+    .music-btn:hover,
+    .theme-btn:hover {
+      transform: scale(1.1);
+      box-shadow: 0 0 20px #8f5cff;
+    }
+
+    .music-btn {
+      right: 20px;
+    }
+
+    .theme-btn {
+      right: 90px;
+    }
+
+    footer {
+      text-align: center;
+      padding: 40px;
+      color: #999;
+    }
+
+    .cursor-glow {
+      position: fixed;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: rgba(143,92,255,0.7);
+      pointer-events: none;
+      filter: blur(10px);
+      z-index: 9999;
+      transform: translate(-50%, -50%);
+    }
+
+    @media(max-width:768px) {
+      nav {
+        padding: 20px;
+        flex-direction: column;
+        gap: 15px;
+      }
+
+      .hero h1 {
+        font-size: 3rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="loader" id="loader">
+  <h1>Loading...</h1>
+</div>
+
+<canvas id="particles"></canvas>
+<div class="overlay"></div>
+<div class="cursor-glow" id="cursorGlow"></div>
+
+<header>
+  <nav>
+    <div class="logo">Live Wallpapers</div>
+    <ul>
+      <li>Home</li>
+      <li>Categories</li>
+      <li>Popular</li>
+      <li>Contact</li>
+    </ul>
+  </nav>
+</header>
+
+<section class="hero">
+  <h1>Live Wallpapers</h1>
+  <p>
+    Discover cinematic cyberpunk and anime live wallpapers with immersive effects and smooth animations.
+  </p>
+
+  <div class="search-box">
+    <input type="text" placeholder="Search wallpapers...">
+    <button>Search</button>
+  </div>
+
+  <div class="clock" id="clock"></div>
+</section>
+
+<section>
+  <h2 class="section-title">Categories</h2>
+
+  <div class="categories">
+    <div class="category">Anime</div>
+    <div class="category">Gaming</div>
+    <div class="category">Nature</div>
+    <div class="category">Cyberpunk</div>
+    <div class="category">Space</div>
+  </div>
+
+  <div style="display:flex;justify-content:center;margin-bottom:40px;">
+    <div style="width:100%;max-width:700px;padding:30px;border-radius:25px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);backdrop-filter:blur(15px);box-shadow:0 0 30px rgba(143,92,255,0.2);">
+      <h3 style="margin-bottom:20px;color:#9b7bff;font-size:1.6rem;text-align:center;">Upload Your Live Wallpaper</h3>
+
+      <input type="text" id="wallpaperTitle" placeholder="Wallpaper Title" style="width:100%;padding:15px;margin-bottom:15px;border:none;border-radius:12px;background:rgba(255,255,255,0.08);color:white;outline:none;">
+
+      <input type="text" id="wallpaperCategory" placeholder="Category (Anime, Gaming...)" style="width:100%;padding:15px;margin-bottom:15px;border:none;border-radius:12px;background:rgba(255,255,255,0.08);color:white;outline:none;">
+
+      <input type="file" id="wallpaperUpload" accept="image/*,video/*" style="width:100%;padding:15px;margin-bottom:20px;border:none;border-radius:12px;background:rgba(255,255,255,0.08);color:white;outline:none;">
+
+      <button id="uploadBtn" style="width:100%;padding:15px;border:none;border-radius:15px;background:#8f5cff;color:white;font-size:1rem;cursor:pointer;transition:0.3s;">Upload Wallpaper</button>
+    </div>
+  </div>
+
+  <div class="wallpapers">
+
+    <div class="card">
+      <img src="https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=1200&auto=format&fit=crop" alt="Wallpaper">
+      <div class="card-content">
+        <h3>Cyber City</h3>
+        <p>Neon cyberpunk animated wallpaper.</p>
+        <div class="buttons">
+          <button class="preview">Preview</button>
+          <button class="download">Download</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <img src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?q=80&w=1200&auto=format&fit=crop" alt="Wallpaper">
+      <div class="card-content">
+        <h3>Nature Dreams</h3>
+        <p>Relaxing cinematic nature wallpaper.</p>
+        <div class="buttons">
+          <button class="preview">Preview</button>
+          <button class="download">Download</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <img src="https://images.unsplash.com/photo-1520034475321-cbe63696469a?q=80&w=1200&auto=format&fit=crop" alt="Wallpaper">
+      <div class="card-content">
+        <h3>Anime Neon</h3>
+        <p>Stylish anime-inspired wallpaper.</p>
+        <div class="buttons">
+          <button class="preview">Preview</button>
+          <button class="download">Download</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<footer>
+  © 2026 Live Wallpapers — Cyberpunk Anime Wallpaper Platform
+</footer>
+
+<div class="modal" id="modal">
+  <img id="modalImage" src="" alt="Preview">
+</div>
+
+<button class="music-btn" id="musicBtn">♫</button>
+<button class="theme-btn" id="themeBtn">☾</button>
+
+<audio id="bgMusic" loop>
+  <source src="" type="audio/mp3">
+</audio>
+
+<script>
+  // Loading Screen
+  window.addEventListener('load', () => {
+    setTimeout(() => {
+      const loader = document.getElementById('loader');
+      loader.style.opacity = '0';
+      setTimeout(() => loader.style.display = 'none', 1000);
+    }, 1500);
+  });
+
+  // Clock
+  function updateClock() {
+    const now = new Date();
+    document.getElementById('clock').innerHTML = now.toLocaleString();
+  }
+
+  setInterval(updateClock, 1000);
+  updateClock();
+
+  // Modal Preview
+  const modal = document.getElementById('modal');
+  const modalImage = document.getElementById('modalImage');
+
+  document.querySelectorAll('.preview').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const img = e.target.closest('.card').querySelector('img').src;
+      modalImage.src = img;
+      modal.style.display = 'flex';
+    });
+  });
+
+  modal.addEventListener('click', () => {
+    modal.style.display = 'none';
+  });
+
+  // Dark Mode Toggle
+  let dark = true;
+  document.getElementById('themeBtn').onclick = () => {
+    dark = !dark;
+
+    if (!dark) {
+      document.body.style.background = '#f5f5f5';
+      document.body.style.color = '#111';
+    } else {
+      document.body.style.background = '#050816';
+      document.body.style.color = 'white';
+    }
+  };
+
+  // Music Toggle
+  const music = document.getElementById('bgMusic');
+  const musicBtn = document.getElementById('musicBtn');
+  let playing = false;
+
+  musicBtn.onclick = () => {
+    if (!playing) {
+      music.play();
+      musicBtn.innerHTML = '❚❚';
+    } else {
+      music.pause();
+      musicBtn.innerHTML = '♫';
+    }
+
+    playing = !playing;
+  };
+
+  // Cursor Glow
+  const glow = document.getElementById('cursorGlow');
+
+  window.addEventListener('mousemove', e => {
+    glow.style.left = e.clientX + 'px';
+    glow.style.top = e.clientY + 'px';
+  });
+
+  // Particle Background
+  const canvas = document.getElementById('particles');
+  const ctx = canvas.getContext('2d');
+
+  let particles = [];
+
+  function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+
+  class Particle {
+    constructor() {
+      this.x = Math.random() * canvas.width;
+      this.y = Math.random() * canvas.height;
+      this.radius = Math.random() * 2 + 1;
+      this.speedY = Math.random() * 0.5 + 0.2;
+      this.opacity = Math.random();
+    }
+
+    update() {
+      this.y += this.speedY;
+
+      if (this.y > canvas.height) {
+        this.y = 0;
+        this.x = Math.random() * canvas.width;
+      }
+    }
+
+    draw() {
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(143,92,255,${this.opacity})`;
+      ctx.fill();
+    }
+  }
+
+  for (let i = 0; i < 120; i++) {
+    particles.push(new Particle());
+  }
+
+  function animate() {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    particles.forEach(p => {
+      p.update();
+      p.draw();
+    });
+
+    requestAnimationFrame(animate);
+  }
+
+  animate();
+
+  // Upload Wallpaper Feature
+  const uploadBtn = document.getElementById('uploadBtn');
+
+  uploadBtn.addEventListener('click', () => {
+    const title = document.getElementById('wallpaperTitle').value;
+    const category = document.getElementById('wallpaperCategory').value;
+    const fileInput = document.getElementById('wallpaperUpload');
+
+    if (!fileInput.files[0]) {
+      alert('Please select an image');
+      return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = function(e) {
+      const wallpapers = document.querySelector('.wallpapers');
+
+      const card = document.createElement('div');
+      card.className = 'card';
+
+      const file = fileInput.files[0];
+      const isVideo = file.type.startsWith('video');
+
+      card.innerHTML = `
+        ${isVideo 
+          ? `<video src="${e.target.result}" autoplay muted loop playsinline style="width:100%;height:220px;object-fit:cover;"></video>`
+          : `<img src="${e.target.result}" alt="Wallpaper">`
+        }
+        <div class="card-content">
+          <h3>${title || 'Custom Wallpaper'}</h3>
+          <p>${category || 'Uploaded Wallpaper'}</p>
+          <div class="buttons">
+            <button class="preview">Preview</button>
+            <button class="download">Download</button>
+          </div>
+        </div>
+      `;
+
+      wallpapers.prepend(card);
+
+      card.querySelector('.preview').addEventListener('click', () => {
+        if (isVideo) {
+          modal.innerHTML = `
+            <video src="${e.target.result}" controls autoplay loop style="width:80%;max-width:900px;border-radius:20px;box-shadow:0 0 30px #8f5cff;"></video>
+          `;
+        } else {
+          modal.innerHTML = `<img id="modalImage" src="${e.target.result}" alt="Preview">`;
+        }
+
+        modal.style.display = 'flex';
+      });
+
+      card.querySelector('.download').addEventListener('click', () => {
+        const a = document.createElement('a');
+        a.href = e.target.result;
+        a.download = file.name || 'live-wallpaper';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      });
+
+      document.getElementById('wallpaperTitle').value = '';
+      document.getElementById('wallpaperCategory').value = '';
+      document.getElementById('wallpaperUpload').value = '';
+    };
+
+    reader.readAsDataURL(fileInput.files[0]);
+  });
+</script>
+
+</body>
+</html>
